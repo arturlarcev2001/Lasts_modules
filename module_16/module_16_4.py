@@ -1,62 +1,96 @@
-from fastapi import FastAPI, status, Body, HTTPException
+from fastapi import FastAPI, status, Body, HTTPException, Path
 from pydantic import BaseModel
-from typing import List
+from typing import Annotated
 
 app = FastAPI()
-
 users = []
 
 
 class User(BaseModel):
-    id: int = None
-    username: str
+    id: int
+    name: str
     age: int
-    
 
 
-@app.get("/users")
-def get_all_users() -> List[User]:
+@app.get('/users')
+async def get_users():
     return users
 
 
+@app.post('/users/{username}/{age}')
+async def create_user(
+    username: Annotated[str,
+                Path(
+                  min_length=5,
+                  max_length=15,
+                  description="Enter user name"
+                  )
+              ],
+    age:      Annotated[int,
+                        Path(
+                            ge=16,
+                            le=80,
+                            description="Enter user age"
+                            )
+                        ]
+    ):
+    if len(users) == 0:
+        id = 1
+    else:
+        id = len(users) + 1
+    user = User(id=id, name=username, age=age)
+    users.append(user)
+    return f'User {id} was created'
 
-@app.post("/users/{username}/{age}")
-def create_user(username, age):
-    try:
-        user = User(
-                'id': id,
-                'username': username,
-                'age': age
-                )
-        if user not in users:
-            users.append(user)
-        else:
-            raise HTTPException(status_code=404, detail="User already exists")
-    except:
-        print('Unknown error')
-    return users
-        
 
-@app.put("/users/{user_id}")
-def update_user(user_id: int, user: str = Body()) -> str:
+@app.put('/users/{id}/{username}/{age}')
+async def update_user(
+        id: Annotated[int,
+                      Path(
+                           ge=1,
+                           le=100,
+                           description="Enter valid ID"
+                      )
+                     ],
+
+        username: Annotated[str,
+                            Path(
+                                  min_length=5,
+                                  max_length=15,
+                                  description="Enter user name"
+                            )
+                           ],
+
+        age: Annotated[int,
+                       Path(
+                             ge=16,
+                             le=80,
+                             description="Enter user age"
+                            )
+                           ]
+       ):
     try:
-        name = user.username
-        age = user.age
-        return f"User updated!"
+        user = users[int(id)-1]
+        user.name = username
+        user.age = age
+        return f'User {id} was updated'
     except IndexError:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail='User was not found')
 
 
-@app.delete("/users/{user_id}")
-def delete_user(user_id: int) -> str:
+@app.delete('/users/{id}')
+async def delete_user(
+	id: Annotated[int,
+                      Path(
+                            ge=1,
+                            le=100,
+                            description="Enter valid ID"
+                      )
+                     ]
+        ):
     try:
-        users.pop(user_id)
-        return f"User ID={user_id} deleted!"
+        user = users[id-1]
+        users.pop(id-1)
+        return user
     except IndexError:
-        raise HTTPException(status_code=404, detail="User not found")
-
-
-@app.delete("/")
-def delete_all_users() -> str:
-    users.clear()
-    return "All users deleted!"
+        raise HTTPException(status_code=404, detail='User was not found')
