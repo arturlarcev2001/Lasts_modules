@@ -1,49 +1,62 @@
 from fastapi import FastAPI, status, Body, HTTPException
 from pydantic import BaseModel
-
+from typing import List
 
 app = FastAPI()
+
 users = []
 
 
 class User(BaseModel):
-    id: int
-    name: str
+    id: int = None
+    username: str
     age: int
+    
 
 
-@app.get('/users')
-async def get_users():
+@app.get("/users")
+def get_all_users() -> List[User]:
     return users
 
 
-@app.post('/users/{username}/{age}')
-async def create_user(username, age):
-    if len(users) == 0:
-        id = 1
-    else:
-        id = len(users) + 1
-    user = User(id=id, name=username, age=age)
-    users.append(user)
-    return f'User {id} was created'
 
-
-@app.put('/users/{id}/{username}/{age}')
-async def update_user(id, username, age):
+@app.post("/users/{username}/{age}")
+def create_user(username, age):
     try:
-        user = users[int(id)-1]
-        user.name = username
-        user.age = age
-        return f'User {id} was updated'
-    except IndexError:
-        raise HTTPException(status_code=404, detail='User was not found')
+        user = User(
+                'id': id,
+                'username': username,
+                'age': age
+                )
+        if user not in users:
+            users.append(user)
+        else:
+            raise HTTPException(status_code=404, detail="User already exists")
+    except:
+        print('Unknown error')
+    return users
+        
 
-
-@app.delete('/users/{id}')
-async def delete_user(id):
+@app.put("/users/{user_id}")
+def update_user(user_id: int, user: str = Body()) -> str:
     try:
-        user = users[id]
-        users.pop(id)
-        return user
+        name = user.username
+        age = user.age
+        return f"User updated!"
     except IndexError:
-        raise HTTPException(status_code=404, detail='User was not found')
+        raise HTTPException(status_code=404, detail="User not found")
+
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int) -> str:
+    try:
+        users.pop(user_id)
+        return f"User ID={user_id} deleted!"
+    except IndexError:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
+@app.delete("/")
+def delete_all_users() -> str:
+    users.clear()
+    return "All users deleted!"
