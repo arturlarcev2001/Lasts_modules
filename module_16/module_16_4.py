@@ -37,7 +37,7 @@ async def create_user(
     if len(users) == 0:
         id = 1
     else:
-        id = len(users) + 1
+        id = users[len(users)-1].id + 1
     user = User(id=id, name=username, age=age)
     users.append(user)
     return f'User {id} was created'
